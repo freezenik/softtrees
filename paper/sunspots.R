@@ -1,23 +1,3 @@
-## Paper on sunspots: https://iopscience.iop.org/article/10.3847/1538-4357/ab4990/pdf
-## Book: https://otexts.com/fpp2/nnetar.html
-## NN: https://blogs.rstudio.com/ai/posts/2018-06-25-sunspots-lstm/
-## Sunspot prediction: https://doi.org/10.1016/j.asr.2021.10.047
-## NASA: https://www.nasa.gov/sites/default/files/atoms/files/jan2022ssn_prd.txt
-## Forecast: https://www.swpc.noaa.gov/news/solar-cycle-25-forecast-update?fbclid=IwAR0II6o75ehEkIfRW-QP4F4w1ljXx89KsQrKdhEGeJvnIm6GviIFiEjdH34
-## More: https://machinelearningmastery.com/multi-step-time-series-forecasting/
-## Multi-step AR boosting: http://proceedings.mlr.press/v32/taieb14.pdf
-## Talk: https://forecasters.org/wp-content/uploads/gravity_forms/7-2a51b93047891f1ec3608bdbd77ca58d/2013/07/BENTAIEB_SOUHAIB_ISF2013.pdf
-## MultiStep forecasting: https://www.sciencedirect.com/science/article/pii/S0169207010001433
-## Another interesting data source: https://omniweb.gsfc.nasa.gov/ow.html
-## Simplex projection: http://opetchey.github.io/RREEBES/Sugihara_and_May_1990_Nature/Simplex_projection_walkthrough.html
-## sc 25 forecast: https://www.swpc.noaa.gov/news/solar-cycle-25-forecast-update?fbclid=IwAR0II6o75ehEkIfRW-QP4F4w1ljXx89KsQrKdhEGeJvnIm6GviIFiEjdH34
-## https://link.springer.com/content/pdf/10.1007/lrsp-2015-4.pdf
-## All NASA forecasts: https://www.nasa.gov/msfcsolar/archivedforecast
-## Good paper: https://www.tandfonline.com/doi/pdf/10.1080/08839514.2022.2074129
-## MSAFE model: https://ntrs.nasa.gov/api/citations/20170005305/downloads/20170005305.pdf
-## NASA technical: https://www.nasa.gov/sites/default/files/atoms/files/tm4759_0.pdf
-## More: https://link.springer.com/content/pdf/10.1007/s11207-020-01723-y.pdf
-
 ## Required packages
 library("softtrees")
 library("disttree")
@@ -28,7 +8,6 @@ library("forecast")
 set.seed(123)
 
 ## Save newest data set as data.frame.
-## Data from https://wwwbis.sidc.be/silso/datafiles.
 if(!file.exists("sunspots.rds")) {
   d <- read.csv2("https://www.sidc.be/silso/DATA/SN_ms_tot_V2.0.csv", header = FALSE)
   raw <- read.csv2("https://www.sidc.be/silso/DATA/SN_m_tot_V2.0.csv", header = FALSE)
@@ -218,8 +197,6 @@ model_forecast <- function(object, data, h = 10, family)
 
   return(rval)
 }
-
-## cn <- sample(colnames(nasa), size = 1)
 
 eval <- function(cn, plot = FALSE) {
   x_nasa <- nasa[, cn]
