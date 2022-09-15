@@ -16,4 +16,4 @@ The R package can be installed with
 devtools::install_github("freezenik/softtrees")
 ```
 
-For examples see the manual pages for `?srt`.
+For examples see the manual pages for `?srt` and the supplementary materials.
