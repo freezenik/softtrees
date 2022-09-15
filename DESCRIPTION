@@ -2,7 +2,7 @@ Package: softtrees
 Type: Package
 Title: Soft Distributional Regression Trees and Forests
 Version: 1.0
-Date: 2020-09-24
+Date: 2022-09-15
 Authors@R: c(person(given = "Nikolaus", family = "Umlauf", role = c("aut", "cre"), email = "Nikolaus.Umlauf@uibk.ac.at",
          comment = c(ORCID = "0000-0003-2160-9803")))
 Description: The implementation provides infrastructure for the estimnation of distributional
@@ -14,4 +14,3 @@ Suggests: knitr, scoringRules
 License: GPL-2 | GPL-3
 LazyLoad: yes
 RoxygenNote: 7.0.2
-
