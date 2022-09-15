@@ -1,0 +1,59 @@
+import("gamlss.dist")
+import("coin")
+
+importFrom("Formula", "as.Formula")
+importFrom("grDevices", "n2mfrow")
+importFrom("graphics", "abline", "box", "hist", "lines", "par", "plot")
+importFrom("stats", "coef", "delete.response", "density", "dnorm",
+  "family", "make.link", "model.frame", "model.matrix",
+  "model.response", "optim", "optimize", "pnorm", "ppoints",
+  "predict", "qnorm", "qqline", "qqnorm", "residuals",
+  "rnorm", "runif", "sd", "terms", "quantile", "prcomp", "nlm")
+importFrom("graphics", "text")
+importFrom("stats", "as.formula", "as.ts", "fitted", "frequency",
+  "gaussian", "integrate", "model.offset", "model.weights",
+  "na.fail", "na.omit", "offset", "update")
+importFrom("utils", "tail")
+
+export(
+  "srt",               
+  "srtboost",
+  "Gaussian",
+  "Gaussian0",
+  "Weibull",
+  "mstop",
+  "Crazy"
+)
+
+S3method("predict", "srt")
+S3method("predict", "srf")
+S3method("predict", "srtboost")
+
+S3method("plot", "srt")
+S3method("plot", "srf")
+S3method("plot", "srtboost")
+S3method("plot", "srt_residuals")
+
+S3method("residuals", "srt")
+S3method("residuals", "srf")
+S3method("residuals", "srtboost")
+
+S3method("print", "srt_family")
+
+S3method("family", "srt")
+S3method("family", "srf")
+S3method("family", "srtboost")
+
+S3method("model.frame", "srt")
+S3method("model.frame", "srf")
+S3method("model.frame", "srtboost")
+
+S3method("model.matrix", "srt")
+S3method("model.matrix", "srf")
+S3method("model.matrix", "srtboost")
+
+S3method("logLik", "srt")
+S3method("logLik", "srf")
+S3method("logLik", "srtboost")
+
+useDynLib(softtrees, .registration = TRUE)
