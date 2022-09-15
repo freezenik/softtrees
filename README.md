@@ -1,6 +1,6 @@
 # softtrees
 
-This is the accompanying R package for this article:
+This is the accompanying R package for the article:
 
 Nikolaus Umlauf and Nadja Klein. Adaptive Soft Distributional Regression Trees. Technical report 2022.
 
