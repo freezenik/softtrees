@@ -82,8 +82,8 @@ eval_NO <- function(n = 1000, ...) {
     update(f2, NULL ~ .)
   )
 
-  b1 <- srt(f1, data = d, K = 2, family = NO, lambda = 5, method = "adaptive", plot = FALSE, maxs = 100)
-  b2 <- srt(f1, data = d, K = 2, family = NO, lambda = 5, method = "full", plot = FALSE, maxs = 40)
+  b1 <- srt(f1, data = d, K = 2, family = NO, lambda = 5, plot = FALSE)
+  b2 <- srt(f1, data = d, K = 2, family = NO, lambda = 2, plot = FALSE, ntrees = 100)
   b3 <- bamlss(f2, data = d, family = "gaussian")
   b4 <- distforest(f, data = d, family = NO, ntree = 1000)
 
@@ -91,19 +91,19 @@ eval_NO <- function(n = 1000, ...) {
   p2 <- predict(b2, newdata = nd)
   p3 <- predict(b3, newdata = nd)
   p4 <- predict(b4, newdata = nd)
-
+  
   err.mu <- err.sigma <- list()
   for(f in c("mape", "mse")) {
     err.mu[[f]] <- list()
-    err.mu[[f]]$srt_a <- eval(parse(text = paste0(f, '(nd$mu, p1$mu)')))
-    err.mu[[f]]$srt_f <- eval(parse(text = paste0(f, '(nd$mu, p2$mu)')))
+    err.mu[[f]]$srt <- eval(parse(text = paste0(f, '(nd$mu, p1$mu)')))
+    err.mu[[f]]$srf <- eval(parse(text = paste0(f, '(nd$mu, p2$mu)')))
     err.mu[[f]]$bamlss <- eval(parse(text = paste0(f, '(nd$mu, p3$mu)')))
     err.mu[[f]]$distforest <- eval(parse(text = paste0(f, '(nd$mu, p4[, 1])')))
     err.mu[[f]] <- do.call("c", err.mu[[f]])
 
     err.sigma[[f]] <- list()
-    err.sigma[[f]]$srt_a <- eval(parse(text = paste0(f, '(nd$sigma, p1$sigma)')))
-    err.sigma[[f]]$srt_f <- eval(parse(text = paste0(f, '(nd$sigma, p2$sigma)')))
+    err.sigma[[f]]$srt <- eval(parse(text = paste0(f, '(nd$sigma, p1$sigma)')))
+    err.sigma[[f]]$srf <- eval(parse(text = paste0(f, '(nd$sigma, p2$sigma)')))
     err.sigma[[f]]$bamlss <- eval(parse(text = paste0(f, '(nd$sigma, p3$sigma)')))
     err.sigma[[f]]$distforest <- eval(parse(text = paste0(f, '(nd$sigma, log(p4[, 2]))')))
     err.sigma[[f]] <- do.call("c", err.sigma[[f]])
@@ -123,8 +123,8 @@ eval_NO <- function(n = 1000, ...) {
   p3$sigma <- exp(p3$sigma)
 
   crps <- c(
-    "srt_a" = mean(fam$crps(nd$y, p1), na.rm = TRUE),
-    "srt_f" = mean(fam$crps(nd$y, p2), na.rm = TRUE),
+    "srt" = mean(fam$crps(nd$y, p1), na.rm = TRUE),
+    "srf" = mean(fam$crps(nd$y, p2), na.rm = TRUE),
     "bamlss" = mean(fam$crps(nd$y, p3), na.rm = TRUE),
     "distforest" = mean(fam$crps(nd$y, p4), na.rm = TRUE)
   )
@@ -165,8 +165,8 @@ eval_GU <- function(n = 1000, ...) {
     update(f2, NULL ~ .)
   )
 
-  b1 <- srt(f1, data = d, K = 2, family = GU, lambda = 5, method = "adaptive", plot = FALSE, maxs = 100)
-  b2 <- srt(f1, data = d, K = 2, family = GU, lambda = 5, method = "full", plot = FALSE, maxs = 40)
+  b1 <- srt(f1, data = d, K = 2, family = GU, lambda = 5, plot = FALSE)
+  b2 <- srt(f1, data = d, K = 2, family = GU, lambda = 2, plot = FALSE, ntrees = 100)
   b3 <- bamlss(f2, data = d, family = GU)
   b4 <- distforest(f, data = d, family = GU, ntree = 1000)
 
@@ -185,15 +185,15 @@ eval_GU <- function(n = 1000, ...) {
   err.mu <- err.sigma <- list()
   for(f in c("mape", "mse")) {
     err.mu[[f]] <- list()
-    err.mu[[f]]$srt_a <- eval(parse(text = paste0(f, '(nd$mu, p1$mu)')))
-    err.mu[[f]]$srt_f <- eval(parse(text = paste0(f, '(nd$mu, p2$mu)')))
+    err.mu[[f]]$srt <- eval(parse(text = paste0(f, '(nd$mu, p1$mu)')))
+    err.mu[[f]]$srf <- eval(parse(text = paste0(f, '(nd$mu, p2$mu)')))
     err.mu[[f]]$bamlss <- eval(parse(text = paste0(f, '(nd$mu, p3$mu)')))
     err.mu[[f]]$distforest <- eval(parse(text = paste0(f, '(nd$mu, p4[, 1])')))
     err.mu[[f]] <- do.call("c", err.mu[[f]])
 
     err.sigma[[f]] <- list()
-    err.sigma[[f]]$srt_a <- eval(parse(text = paste0(f, '(nd$sigma, p1$sigma)')))
-    err.sigma[[f]]$srt_f <- eval(parse(text = paste0(f, '(nd$sigma, p2$sigma)')))
+    err.sigma[[f]]$srt <- eval(parse(text = paste0(f, '(nd$sigma, p1$sigma)')))
+    err.sigma[[f]]$srf <- eval(parse(text = paste0(f, '(nd$sigma, p2$sigma)')))
     err.sigma[[f]]$bamlss <- eval(parse(text = paste0(f, '(nd$sigma, p3$sigma)')))
     err.sigma[[f]]$distforest <- eval(parse(text = paste0(f, '(nd$sigma, log(p4[, 2]))')))
     err.sigma[[f]] <- do.call("c", err.sigma[[f]])
@@ -211,8 +211,8 @@ eval_GU <- function(n = 1000, ...) {
   p3$sigma <- exp(p3$sigma)
 
   crps <- c(
-    "srt_a" = mean(crps_GU(nd$y, p1), na.rm = TRUE),
-    "srt_f" = mean(crps_GU(nd$y, p2), na.rm = TRUE),
+    "srt" = mean(crps_GU(nd$y, p1), na.rm = TRUE),
+    "srf" = mean(crps_GU(nd$y, p2), na.rm = TRUE),
     "bamlss" = mean(crps_GU(nd$y, p3), na.rm = TRUE),
     "distforest" = mean(crps_GU(nd$y, p4), na.rm = TRUE)
   )
@@ -253,8 +253,8 @@ eval_NBI <- function(n = 1000, ...) {
     update(f2, NULL ~ .)
   )
 
-  b1 <- srt(f1, data = d, K = 2, family = NBI, lambda = 4, method = "adaptive", plot = FALSE, maxs = 100)
-  b2 <- srt(f1, data = d, K = 2, family = NBI, lambda = 4, method = "full", plot = FALSE, maxs = 40)
+  b1 <- srt(f1, data = d, K = 2, family = NBI, lambda = 4, plot = FALSE)
+  b2 <- srt(f1, data = d, K = 2, family = NBI, lambda = 2, plot = FALSE, ntrees = 100)
   b3 <- bamlss(f2, data = d, family = NBI)
   b4 <- distforest(f, data = d, family = NBI, ntree = 1000)
 
@@ -266,15 +266,15 @@ eval_NBI <- function(n = 1000, ...) {
   err.mu <- err.sigma <- list()
   for(f in c("mape", "mse")) {
     err.mu[[f]] <- list()
-    err.mu[[f]]$srt_a <- eval(parse(text = paste0(f, '(nd$mu, p1$mu)')))
-    err.mu[[f]]$srt_f <- eval(parse(text = paste0(f, '(nd$mu, p2$mu)')))
+    err.mu[[f]]$srt <- eval(parse(text = paste0(f, '(nd$mu, p1$mu)')))
+    err.mu[[f]]$srf <- eval(parse(text = paste0(f, '(nd$mu, p2$mu)')))
     err.mu[[f]]$bamlss <- eval(parse(text = paste0(f, '(nd$mu, p3$mu)')))
     err.mu[[f]]$distforest <- eval(parse(text = paste0(f, '(nd$mu, log(p4[, 1]))')))
     err.mu[[f]] <- do.call("c", err.mu[[f]])
 
     err.sigma[[f]] <- list()
-    err.sigma[[f]]$srt_a <- eval(parse(text = paste0(f, '(nd$sigma, p1$sigma)')))
-    err.sigma[[f]]$srt_f <- eval(parse(text = paste0(f, '(nd$sigma, p2$sigma)')))
+    err.sigma[[f]]$srt <- eval(parse(text = paste0(f, '(nd$sigma, p1$sigma)')))
+    err.sigma[[f]]$srf <- eval(parse(text = paste0(f, '(nd$sigma, p2$sigma)')))
     err.sigma[[f]]$bamlss <- eval(parse(text = paste0(f, '(nd$sigma, p3$sigma)')))
     err.sigma[[f]]$distforest <- eval(parse(text = paste0(f, '(nd$sigma, log(p4[, 2]))')))
     err.sigma[[f]] <- do.call("c", err.sigma[[f]])
@@ -293,8 +293,8 @@ eval_NBI <- function(n = 1000, ...) {
   }
 
   log_scores <- c(
-    "srt_a" = logs(nd$y, list("mu" = exp(p1$mu), "sigma" = exp(p1$sigma))),
-    "srt_f" = logs(nd$y, list("mu" = exp(p2$mu), "sigma" = exp(p2$sigma))),
+    "srt" = logs(nd$y, list("mu" = exp(p1$mu), "sigma" = exp(p1$sigma))),
+    "srf" = logs(nd$y, list("mu" = exp(p2$mu), "sigma" = exp(p2$sigma))),
     "bamlss" = logs(nd$y, list("mu" = exp(p3$mu), "sigma" = exp(p3$sigma))),
     "distforest" = logs(nd$y, list("mu" = p4$mu, "sigma" = p4$sigma))
   )
@@ -361,4 +361,3 @@ if(!file.exists("sim_results.rds")) {
 
   saveRDS(sim_results, file = "sim_results.rds")
 }
-
