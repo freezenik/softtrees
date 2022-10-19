@@ -259,7 +259,7 @@
 srt <- function(formula, family = NULL, data = NULL,
   weights = NULL, subset = NULL, offset = NULL, contrasts = NULL,
   classic = FALSE, ntrees = 1, prob = 0.63, cores = 1, k = 10, lambda = 0.1, aic = TRUE,
-  maxs = Inf, plot = TRUE, verbose = TRUE, model = TRUE, x = FALSE, y = FALSE, 
+  maxs = 100, plot = TRUE, verbose = TRUE, model = TRUE, x = FALSE, y = FALSE, 
   scale.x = FALSE, method = c("adaptive", "full"), ...)
 {
   if(is.null(family))
