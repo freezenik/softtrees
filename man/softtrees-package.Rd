@@ -26,6 +26,11 @@
   Nikolaus Umlauf \email{Nikolaus.Umlauf@uibk.ac.at}
 }
 
+\references{
+  Umlauf N, Klein N (2022). Distributional Adaptive Soft Regression Trees.
+  \doi{doi:10.48550/ARXIV.2210.10389}
+}
+
 \keyword{ package }
 \seealso{
   \code{\link{srt}}, \code{\link{srtboost}}, \code{\link{predict.srt}}
