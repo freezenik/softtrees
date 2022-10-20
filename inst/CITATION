@@ -1,0 +1,9 @@
+bibentry(bibtype = "Misc",
+         title = "Distributional Adaptive Soft Regression Trees",
+         author = c(person(given = "Nikolaus", family = "Umlauf", email = "Nikolaus.Umlauf@uibk.ac.at"),
+                    person(given = "Nadja", family = "Klein", email = "nklein@uni-goettingen.de")),
+         year = "2022",
+         publisher = "arXiv",
+         doi = "10.48550/ARXIV.2210.10389",
+         header = "For the model framework please cite:",
+)
