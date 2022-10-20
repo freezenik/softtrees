@@ -242,7 +242,7 @@ eval <- function(cn, plot = FALSE) {
     p1 <- par1 <- list()
     mse1 <- crps1 <- NULL
     for(l in seq_along(lambdas)) {
-      b1 <- try(srt(f, data = df, K = log(nrow(df)), family = families[[j]], lambda = lambdas[l], maxs = 100, plot = FALSE, verbose = FALSE))
+      b1 <- try(srt(f, data = df, K = log(nrow(df)), family = families[[j]], lambda = lambdas[l], plot = FALSE, verbose = FALSE))
       if(!inherits(b1, "try-error")) {
         p <- model_forecast(b1, data = df, h = length(x_nasa), family = family(b1))
         par1[[l]] <- attr(p, "parameters")
@@ -408,7 +408,7 @@ if(!file.exists("sunspots_model.rds")) {
   f <- list(f, update(f, NULL ~ .), update(f, NULL ~ .), update(f, NULL ~ .))
 
   b <- srt(f, data = df, K = log(nrow(df)), family = GA,
-    lambda = 2, maxs = 100, ntrees = 2000, cores = 50)
+    lambda = 2, ntrees = 2000, cores = 50)
 
   saveRDS(b, file = "sunspots_model.rds")
 
