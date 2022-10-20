@@ -67,6 +67,11 @@ srt(formula, family = NULL, data = NULL, weights = NULL,
 \value{
   A list of class \code{"srt"} if \code{ntrees = 1} or of class \code{"srf"}.
 }
+  
+\references{
+  Umlauf N, Klein N (2022). Distributional Adaptive Soft Regression Trees.
+  \doi{doi:10.48550/ARXIV.2210.10389}
+}
 
 \seealso{
   \code{\link{srtboost}}, \code{\link{predict.srt}}
