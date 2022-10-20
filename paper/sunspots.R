@@ -224,7 +224,6 @@ eval <- function(cn, plot = FALSE) {
 
   families <- list(
     "NO" = NO(),
-    "SN1" = SN1(),
     "GA" = GA(),
     "TF" = TF()
   )
