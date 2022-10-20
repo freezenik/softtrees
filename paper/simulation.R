@@ -349,15 +349,5 @@ if(!file.exists("sim_results.rds")) {
 
   sim_results <- seval(nrep = 100, nobs = c(500, 1000, 5000, 10000), cores = 50)
 
-  for(j in c("MAPE", "MSE", "SCORE"))
-    sim_results[[j]] <- as.numeric(sim_results[[j]])
-
-  for(j in c("Model", "Parameter", "Sim", "Nobs"))
-    sim_results[[j]] <- as.factor(as.character(sim_results[[j]]))
-
-  i <- grep("Error", as.character(sim_results$Model))
-  if(length(i))
-    sim_results <- sim_results[-i, ]
-
   saveRDS(sim_results, file = "sim_results.rds")
 }
