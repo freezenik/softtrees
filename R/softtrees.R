@@ -485,7 +485,7 @@ srt <- function(formula, family = NULL, data = NULL,
 }
 
 
-family.srt <- family.srf <- family.srtboost <- function(object, ...)
+family.srt <- family.srf <- family.srtboost <- family.srtm <- function(object, ...)
 {
   return(object$family)
 }
@@ -734,7 +734,7 @@ extract_nnet_weights <- function(x)
         if(is.null(weights[[i]])) {
           XW <- Xi[[i]] * hess
         } else {
-          XW <- Xi[[i]] * hess * weights
+          XW <- Xi[[i]] * hess * weights[[i]]
         }
 
         cl2[[i]] <- 1/(sum(XW, na.rm = TRUE) + 1e-20) * sum(XW * z, na.rm = TRUE)
@@ -1263,7 +1263,7 @@ model.frame.srt <- model.frame.srf <- function(formula, ...)
     }
     names(offset) <- nx
     fcall[c("offset", "weights")] <- NULL
-    fcall$drop.unused.levels <- TRUE
+    fcall$drop.unused.levels <- FALSE
     fcall[[1L]] <- quote(stats::model.frame)
 
     model <- list()
@@ -1613,6 +1613,7 @@ residuals.srt <- residuals.srf <- residuals.srtboost <- function(object, type = 
     type <- match.arg(type)
 
     object$model <- NULL
+
     object$y <- model.response(model.frame(object, ...)[[names(object$formula)[1L]]])
 
     if(is.null(object$y))
@@ -1839,9 +1840,18 @@ plot.srt <- plot.srf <- plot.srtboost <- function(x,
   i <- pmatch(which, "criterion")
   i <- na.omit(i)
   if(length(i)) {
-    plot(x$criterion, type = "l", lwd = 2, xlab = "Iteration",
-      ylab = paste0("-2 * logLik + ", round(x$K, 2), " * edf"),
-      main = "Information criterion")
+    if(is.null(x$criterion)) {
+      if(!is.null(x$logLik)) {
+        plot(x$logLik, type = "l", lwd = 2, xlab = "Iteration",
+          ylab = paste0("logLik"),
+          main = "logLik path")
+      
+      }
+    } else {
+      plot(x$criterion, type = "l", lwd = 2, xlab = "Iteration",
+        ylab = paste0("-2 * logLik + ", round(x$K, 2), " * edf"),
+        main = "Information criterion")
+    }
   }
   i <- pmatch(which, "response-fitted")
   i <- na.omit(i)
@@ -2167,10 +2177,15 @@ srtboost <- function(..., nu = 0.1  , k = 4, lambda = 1e-05, n.iter = 400,
   rval
 }
 
-
 mstop <- function(x) {
-  if(!inherits(x, "srtboost"))
-    stop("object is not a boosted soft regression tree!")
+  UseMethod("mstop")
+}
+
+mstop.default <- function(x) {
+  x$n.iter
+}
+
+mstop.srtboost <- function(x) {
   x$n.iter
 }
 
@@ -2566,4 +2581,3 @@ response_name <- function(object, ...)
 
 #  return(fit)
 #}
-
