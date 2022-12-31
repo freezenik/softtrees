@@ -260,13 +260,17 @@ fmt <- Vectorize(function(x, width = 8, digits = 2) {
                   pval[j] <- pf(fstat[1L], fstat[2L], fstat[3L], lower.tail = FALSE)
               }
             }
-            j <- which.min(pval)
-            val_j[[l]] <- optim(c(0.001, 0.001, 0.001, 1), fn = fn, gr = gr,
-              x = x[, c("(Intercept)", vn[j])], weights = N[, l], method = "L-BFGS-B",
-              control = list("pgtol"= 0.00001))
-            val_j[[l]]$index <- l
-            val_j[[l]]$variable <- vn[j]
-            val_j[[l]]$contrib <- -1 * val_j[[l]]$value - ll0
+            if(!all(is.na(pval))) {
+              j <- which.min(pval)
+              val_j[[l]] <- optim(c(0.001, 0.001, 0.001, 1), fn = fn, gr = gr,
+                x = x[, c("(Intercept)", vn[j])], weights = N[, l], method = "L-BFGS-B",
+                control = list("pgtol"= 0.00001))
+              val_j[[l]]$index <- l
+              val_j[[l]]$variable <- vn[j]
+              val_j[[l]]$contrib <- -1 * val_j[[l]]$value - ll0
+            } else {
+              val_j[[l]] <- list("value" = Inf, "par" = rep(0, 4), "index" = 1L)
+            }
           } else {
             val_j[[l]] <- list("value" = Inf, "par" = rep(0, 4), "index" = 1L)
           }
@@ -920,4 +924,3 @@ mstop.bsdt <- function(object, ...) {
   wm <- which.min(p)
   return(c("mstop" = wm))
 }
-
