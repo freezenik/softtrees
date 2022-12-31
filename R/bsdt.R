@@ -203,7 +203,7 @@ fmt <- Vectorize(function(x, width = 8, digits = 2) {
       G <- cbind(g, 1 - g) * weights
       eta[[i]] <- eta[[i]] + drop(G %*% beta)
       ll <- family$d(y, family$map2par(eta), log = TRUE)
-      ll[(ll < -50) | !is.finite(ll)] <- NA
+      ll[(ll < -1000) | !is.finite(ll)] <- NA
       ll <- sum(ll, na.rm = TRUE)
       ll <- ll - lambda * sum(w^2)
       return(-1 * ll)
