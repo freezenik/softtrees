@@ -15,8 +15,16 @@ importFrom("stats", "as.formula", "as.ts", "fitted", "frequency",
   "na.fail", "na.omit", "offset", "update")
 importFrom("utils", "tail")
 
+importFrom("graphics", "barplot")
+importFrom("stats", "lm", "median", "pf", "terms.formula")
+
+importFrom("graphics", "axis", "plot.default")
+importFrom("stats", "AIC", "loess", "logLik")
+
 export(
-  "srt",               
+  "srt",
+  "bsdt",
+  "variables",             
   "srtboost",
   "Gaussian",
   "Gaussian0",
@@ -28,11 +36,13 @@ export(
 S3method("predict", "srt")
 S3method("predict", "srf")
 S3method("predict", "srtboost")
+S3method("predict", "bsdt")
 
 S3method("plot", "srt")
 S3method("plot", "srf")
 S3method("plot", "srtboost")
 S3method("plot", "srt_residuals")
+S3method("plot", "bsdt_variables")
 
 S3method("residuals", "srt")
 S3method("residuals", "srf")
