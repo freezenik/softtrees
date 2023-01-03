@@ -3,6 +3,7 @@
 \alias{variables}
 \alias{predict.bsdt}
 \alias{plot.bsdt_variables}
+\alias{BB-DAdaSoRT}
 
 \title{
   Boosting Soft Distributional Trees
@@ -115,4 +116,3 @@ matplot(d$x[i], qp[i, ], type = "l",
 
 \keyword{models}
 \keyword{regression}
-
