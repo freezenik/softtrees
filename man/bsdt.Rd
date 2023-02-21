@@ -4,6 +4,9 @@
 \alias{predict.bsdt}
 \alias{plot.bsdt_variables}
 \alias{BB-DAdaSoRT}
+\alias{contrib}
+\alias{plot.bsdt_contrib}
+\alias{new_formula}
 
 \title{
   Boosting Soft Distributional Trees
@@ -20,7 +23,7 @@
 \usage{
 ## Model fitting function.
 bsdt(..., k = 4, maxit = 100, batch_ids = NULL,
-  nu = 0.1, lambda = 0.0001, omin = 50, faster = TRUE,
+  nu = 0.1, lambda = 0.0001, omin = 50, faster = TRUE, shadow = FALSE,
   plot = TRUE, verbose = TRUE, flush = TRUE, eps_logLik = Inf)
 
 ## Predict method.
@@ -30,8 +33,16 @@ bsdt(..., k = 4, maxit = 100, batch_ids = NULL,
 ## Selection frequencies of selected variables,
 variables(x)
 
-## Plotting method.
+## Log-likelihood contributions.
+contrib(x)
+
+## New formula based on most
+## important variables.
+new_formula(x, thres = 0.01)
+
+## Plotting methods.
 \method{plot}{bsdt_variables}(x, legend = TRUE, ...)
+\method{plot}{bsdt_constrib}(x, model = NULL, legend = TRUE, ...)
 }
 
 \arguments{
@@ -48,6 +59,10 @@ variables(x)
   \item{faster}{logical, if set to \code{faster = TRUE}, instead a complete search for the next
     split variable based on the log-likelihood, a faster serach using the current working response
     is used.}
+  \item{shadow}{logical, should shadow variables be generated during fitting leading
+    the tree growth to stop when selected.}
+  \item{thres}{numeric in [0,1], a threshold selecting the most important variables for
+    creating the new formula.}
   \item{plot}{logical, should additional information be plotted during estimation.}
   \item{verbose}{logical, should additional information be printed?}
   \item{flush}{logical, if interactive, then additional information will be printed in one line.}
