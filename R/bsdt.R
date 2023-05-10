@@ -383,10 +383,10 @@ optim_split <- function(x, y, W, family, eta, id, Y, lambda)
               val_j[[l]]$variable <- vn[j]
               val_j[[l]]$contrib <- -1 * val_j[[l]]$value - ll0
             } else {
-              val_j[[l]] <- list("value" = Inf, "par" = rep(0, 4), "index" = 1L)
+              val_j[[l]] <- list("value" = Inf, "par" = rep(0, 2), "index" = 1L)
             }
           } else {
-            val_j[[l]] <- list("value" = Inf, "par" = rep(0, 4), "index" = 1L)
+            val_j[[l]] <- list("value" = Inf, "par" = rep(0, 2), "index" = 1L)
           }
         }
         j <- which.min(sapply(val_j, function(x) x$value))
@@ -400,7 +400,7 @@ optim_split <- function(x, y, W, family, eta, id, Y, lambda)
                 x = x[, c("(Intercept)", j)], weights = N[, l], method = "L-BFGS-B",
                 control = list("pgtol"= 0.00001))
             } else {
-              val_l[[l]] <- list("value" = Inf, "par" = rep(0, 4), "index" = 1L)
+              val_l[[l]] <- list("value" = Inf, "par" = rep(0, 2), "index" = 1L)
             }
           }
           l <- which.min(sapply(val_l, function(x) x$value))
@@ -428,6 +428,12 @@ optim_split <- function(x, y, W, family, eta, id, Y, lambda)
       )
       beta <- coef[[K]]$coefficients[1:2]
       w <- coef[[K]]$coefficients[-c(1:2)]
+      if((length(w) != 2) || is.null(coef[[K]]$variable)) {
+        print(w)
+        print(coef[[K]])
+        print(K)
+        print(coef)
+      }
       g <- sigmoid(x[, c("(Intercept)", coef[[K]]$variable)] %*% w)
       G <- cbind(g, 1 - g) * N[, coef[[K]]$index]
       eta[[i]] <- eta[[i]] + drop(G %*% beta)
