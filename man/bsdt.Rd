@@ -22,8 +22,8 @@
 
 \usage{
 ## Model fitting function.
-bsdt(..., k = 4, maxit = 100, batch_ids = NULL,
-  nu = 0.1, lambda = 0.0001, omin = 50, faster = TRUE, shadow = FALSE,
+bsdt(..., k = 2, maxit = 100, batch_ids = NULL,
+  nu = 0.1, lambda = 0.0001, omin = 50, faster = FALSE, shadow = FALSE,
   plot = TRUE, verbose = TRUE, flush = TRUE, eps_logLik = Inf)
 
 ## Predict method.
