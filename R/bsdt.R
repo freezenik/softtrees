@@ -1,7 +1,7 @@
 ## Soft Distributional Regression Tree Machine.
-bsdt <- function(..., k = 4, maxit = 100, batch_ids = NULL,
-  nu = 0.1, lambda = 0.0001, omin = 50, faster = TRUE, shadow = FALSE,
-  plot = TRUE, verbose = TRUE, flush = TRUE, eps_logLik = Inf)
+bsdt <- function(..., k = 2, maxit = 100, batch_ids = NULL,
+  nu = 0.1, lambda = 0.0001, omin = 50, faster = FALSE, shadow = FALSE,
+  plot = TRUE, verbose = TRUE, flush = TRUE, eps_logLik = Inf, xicor = FALSE)
 {
   mf <- srt(..., ret.mfd = TRUE)
 
@@ -10,7 +10,7 @@ bsdt <- function(..., k = 4, maxit = 100, batch_ids = NULL,
   fit <- .bsdt.fit(mf$X, mf$y, family = mf$family, offset = mf$offset,
     k = k, maxit = maxit, batch_ids = batch_ids, faster = faster,
     nu = nu, plot = plot, verbose = verbose, flush = flush, lambda = lambda,
-    omin = omin, eps_logLik = eps_logLik, shadow = shadow)
+    omin = omin, eps_logLik = eps_logLik, shadow = shadow, xicor = xicor)
   mf[names(fit)] <- fit
   mf$call <- match.call()
   class(mf) <- c("bsdt", "srt")
@@ -28,7 +28,7 @@ fmt <- Vectorize(function(x, width = 8, digits = 2) {
 })
 
 .bsdt.fit <- function(X, y, family, k, maxit, batch_ids, nu, start, offset,
-  plot, verbose, flush, digits = 4L, lambda, faster, omin, eps_logLik, shadow)
+  plot, verbose, flush, digits = 4L, lambda, faster, omin, eps_logLik, shadow, xicor)
 {
   nx <- names(X)
   N <- nrow(X[[1L]])
@@ -71,10 +71,12 @@ fmt <- Vectorize(function(x, width = 8, digits = 2) {
     }
     for(i in nx) {
       if(iter > 1) {
-        eta[[i]] <- 0
-        for(j in 1:length(trees[[i]])) {
-          eta[[i]] <- eta[[i]] + nu * predict(trees[[i]][[j]],
-            data = X[[i]][batch_ids[[iter]], , drop = FALSE])
+        eta[[i]] <- rep(0, length(batch_ids[[iter]]))
+        if(length(trees[[i]])) {
+          for(j in 1:length(trees[[i]])) {
+            eta[[i]] <- eta[[i]] + nu * predict(trees[[i]][[j]],
+              data = X[[i]][batch_ids[[iter]], , drop = FALSE])
+          }
         }
       } else {
         eta[[i]] <- rep(0, length(batch_ids[[iter]]))
@@ -97,12 +99,14 @@ fmt <- Vectorize(function(x, width = 8, digits = 2) {
     for(i in nx) {
       ttrees[[i]] <- .fit.stree(x = X[[i]][batch_ids[[iter]], , drop = FALSE],
         y = yi, eta = eta, family = family, i = i, k = k, lambda = lambda[i],
-        faster = faster, omin = omin, shadow = shadow)
+        faster = faster, omin = omin, shadow = shadow, xicor = xicor)
+
       eta[[i]] <- eta[[i]] + nu * predict(ttrees[[i]],
         data = X[[i]][batch_ids[[iter]], , drop = FALSE])
     }
 
     ll1 <- family$loglik(yi, family$map2par(eta))
+
     eps <- abs((ll1 - ll0) / ll0)
     if(m > 1)
       eps2 <- abs((ll0 - ll_save[length(ll_save)]) / ll_save[length(ll_save)])
@@ -272,7 +276,21 @@ optim_split <- function(x, y, W, family, eta, id, Y, lambda)
   return(rval)
 }
 
-.fit.stree <- function(x, y, eta, family, i, k, lambda, faster, omin, shadow)
+xi_cor <- function(xvec, yvec)
+{
+  n <- length(xvec)
+  PI <- rank(xvec, ties.method = "random")
+  fr <- rank(yvec, ties.method = "max")/n
+  gr <- rank((-yvec), ties.method = "max")/n
+  ord <- order(PI)
+  fr <- fr[ord]
+  A1 <- sum(abs(fr[1:(n - 1)] - fr[2:n]))/(2 * n)
+  CU <- mean(gr * (1 - gr))
+  xi <- 1 - A1/CU
+  return(xi)
+}
+
+.fit.stree <- function(x, y, eta, family, i, k, lambda, faster, omin, shadow, xicor)
 {
   coef <- list()
 
@@ -342,31 +360,36 @@ optim_split <- function(x, y, W, family, eta, id, Y, lambda)
       if(faster) {
         score <- process_derivs(family$score[[i]](y, peta, id = i), is.weight = FALSE)
         hess <- process_derivs(family$hess[[i]](y, peta, id = i), is.weight = TRUE)
-        z <- score / hess
+        z <- score / hess - eta[[i]]
         for(l in 1:ncol(N)) {
           if(sum(N[, l] > 0.0001) >= omin) {
             pval <- rep(NA, length(vn))
             for(j in seq_along(vn)) {
               xj <- x[, vn[j]]
-              ok <- FALSE
-              if((uxj <- length(unique(xj))) > 7) {
-                breaks <- unique(quantile(x[, vn[j]], prob = seq(0, 1, length = 7)))
-                if(length(breaks) > 2L) {
-                  xj <- cut(xj, breaks = breaks, include.lowest = TRUE)
-                  ok <- TRUE
-                }
+              uxj <- length(unique(xj))
+              if(xicor & (uxj > 7)) {
+                pval[j] <- -1 * abs(xi_cor(xj, z))
               } else {
-                if(uxj > 1) {
-                  xj <- as.factor(xj)
-                  ok <- TRUE
+                ok <- FALSE
+                if(uxj > 7) {
+                  breaks <- unique(quantile(x[, vn[j]], prob = seq(0, 1, length = 7)))
+                  if(length(breaks) > 2L) {
+                    xj <- cut(xj, breaks = breaks, include.lowest = TRUE)
+                    ok <- TRUE
+                  }
+                } else {
+                  if(uxj > 1) {
+                    xj <- as.factor(xj)
+                    ok <- TRUE
+                  }
                 }
-              }
-              if(ok) {
-                mj <- try(lm(z ~ xj, weights = hess * N[, l]), silent = TRUE)
-                if(!inherits(mj, "try-error")) {
-                  fstat <- summary(mj)$fstatistic
-                  if(!is.null(fstat))
-                    pval[j] <- pf(fstat[1L], fstat[2L], fstat[3L], lower.tail = FALSE)
+                if(ok) {
+                  mj <- try(lm(z ~ xj, weights = hess * N[, l]), silent = TRUE)
+                  if(!inherits(mj, "try-error")) {
+                    fstat <- summary(mj)$fstatistic
+                    if(!is.null(fstat))
+                      pval[j] <- pf(fstat[1L], fstat[2L], fstat[3L], lower.tail = FALSE)
+                  }
                 }
               }
             }
@@ -389,28 +412,30 @@ optim_split <- function(x, y, W, family, eta, id, Y, lambda)
             val_j[[l]] <- list("value" = Inf, "par" = rep(0, 2), "index" = 1L)
           }
         }
-        j <- which.min(sapply(val_j, function(x) x$value))
-        vj <- val_j[[j]]$variable
       } else {
-        for(j in vn) {
-          val_l <- list()
-          for(l in 1:ncol(N)) {
-            if(sum(N[, l] > 0.0001) >= omin) {
-              val_l[[l]] <- optim(c(0.001, 0.001, 0.001, 1), fn = fn, gr = gr,
-                x = x[, c("(Intercept)", j)], weights = N[, l], method = "L-BFGS-B",
+        for(l in 1:ncol(N)) {
+          if(sum(N[, l] > 0.0001) >= omin) {
+            val_lj <- list()
+            for(lj in seq_along(vn)) {
+              val_lj[[lj]] <- optim(c(0.001, 0.001, 0.001, 1), fn = fn, gr = gr,
+                x = x[, c("(Intercept)", vn[lj])], weights = N[, l], method = "L-BFGS-B",
                 control = list("pgtol"= 0.00001))
-            } else {
-              val_l[[l]] <- list("value" = Inf, "par" = rep(0, 2), "index" = 1L)
             }
+
+            lj <- which.min(sapply(val_lj, function(x) x$value))
+
+            val_j[[l]] <- val_lj[[lj]]
+            val_j[[l]]$index <- l
+            val_j[[l]]$variable <- vn[lj]
+            val_j[[l]]$contrib <- -1 * val_j[[l]]$value - ll0
+          } else {
+            val_j[[l]] <- list("value" = Inf, "par" = rep(0, 2), "index" = 1L)
           }
-          l <- which.min(sapply(val_l, function(x) x$value))
-          val_j[[j]] <- val_l[[l]]
-          val_j[[j]]$index <- l
-          val_j[[j]]$contrib <- -1 * val_j[[j]]$value - ll0
         }
-        j <- which.min(sapply(val_j, function(x) x$value))
-        vj <- vn[j]
       }
+
+      j <- which.min(sapply(val_j, function(x) x$value))
+      vj <- val_j[[j]]$variable
 
       if(length(vj)) {
         if(grepl("SHADOW_", vj)) {
@@ -428,13 +453,19 @@ optim_split <- function(x, y, W, family, eta, id, Y, lambda)
       )
       beta <- coef[[K]]$coefficients[1:2]
       w <- coef[[K]]$coefficients[-c(1:2)]
-      if((length(w) != 2) || is.null(coef[[K]]$variable)) {
+      g <- try(sigmoid(x[, c("(Intercept)", coef[[K]]$variable)] %*% w), silent = TRUE)
+      if(inherits(g, "try-error")) {
         print(w)
         print(coef[[K]])
         print(K)
         print(coef)
+        print(head(x[, c("(Intercept)", coef[[K]]$variable)]))
+        print(dim(x[, c("(Intercept)", coef[[K]]$variable)]))
+        if(K > 1) {
+          coef <- coef[-K]
+        }
+        break
       }
-      g <- sigmoid(x[, c("(Intercept)", coef[[K]]$variable)] %*% w)
       G <- cbind(g, 1 - g) * N[, coef[[K]]$index]
       eta[[i]] <- eta[[i]] + drop(G %*% beta)
       N[, coef[[K]]$index] <- G
