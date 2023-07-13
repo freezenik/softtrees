@@ -371,17 +371,17 @@ srt <- function(formula, family = NULL, data = NULL,
       if(scale.x) {
         mfd$scaled[[i]] <- list()
         for(j in vn) {
-#          sx <- list(
-#            "mean" = mean(mfd$X[[i]][, j], na.rm = TRUE),
-#            "sd" = sd(mfd$X[[i]][, j], na.rm = TRUE)
-#          )
-#          mfd$X[[i]][, j] <- (mfd$X[[i]][, j] - sx$mean) / sx$sd
+          sx <- list(
+            "mean" = mean(mfd$X[[i]][, j], na.rm = TRUE),
+            "sd" = sd(mfd$X[[i]][, j], na.rm = TRUE)
+          )
+          mfd$X[[i]][, j] <- (mfd$X[[i]][, j] - sx$mean) / sx$sd
 
-          sx <- list()
-          sx$min <- min(mfd$X[[i]][, j], na.rm = TRUE)
-          sx$max <- max(mfd$X[[i]][, j], na.rm = TRUE)
+#          sx <- list()
+#          sx$min <- min(mfd$X[[i]][, j], na.rm = TRUE)
+#          sx$max <- max(mfd$X[[i]][, j], na.rm = TRUE)
 
-          mfd$X[[i]][, j] <- (mfd$X[[i]][, j] - sx$min) / (sx$max - sx$min)
+#          mfd$X[[i]][, j] <- (mfd$X[[i]][, j] - sx$min) / (sx$max - sx$min)
 
           mfd$scaled[[i]][[j]] <- sx
         }
@@ -607,6 +607,18 @@ extract_nnet_weights <- function(x)
 }
 
 
+## Formatting for printing.
+fmt <- Vectorize(function(x, width = 8, digits = 2) {
+  txt <- formatC(round(x, digits), format = "f", digits = digits, width = width)
+  if(nchar(txt) > width) {
+    txt <- strsplit(txt, "")[[1]]
+    txt <- paste(txt[1:width], collapse = "", sep = "")
+  }
+  txt
+})
+
+
+## Fitting function.
 .srt.fit <- function(X, y, family, k = 10, lambda = 0.1, aic = TRUE,
   K = NULL, plot = TRUE, verbose = TRUE, maxit = Inf, index = NULL,
   eps = 1e-05, find.lambda = FALSE, classic = FALSE,
@@ -619,6 +631,10 @@ extract_nnet_weights <- function(x)
   const <- list(...)$const
   if(is.null(const))
     const <- 1e-5
+
+  do_optim <- list(...)$do_optim
+  if(is.null(do_optim))
+    do_optim <- FALSE
 
   valid <- !is.null(vX)
 
@@ -716,57 +732,78 @@ extract_nnet_weights <- function(x)
     if(verbose)
       cat(".. initializing parameters ..\n")
 
-    eps0 <- eps + 1L
-    k2 <- 0
+    if(do_optim) {
+      obj_fun <- function(beta) {
+        eta <- list()
+        for(i in nx)
+          eta[[i]] <- rep(beta[i], N)
+        ll <- family$loglik(y, family$map2par(eta))
+        return(-ll)
+      }
 
-    while((1e-04 < eps0) & (k2 < 400)) {
-      eta0 <- eta
-      for(i in nx) {
-        ll0 <- family$loglik(y, family$map2par(eta))
+      opt <- optim(unlist(cl2), fn = obj_fun, method = "L-BFGS-B")
+      cl2 <- as.list(opt$par)
+      eta <- list()
+      for(i in nx)
+        eta[[i]] <- rep(cl2[[i]], N)
+      if(verbose)
+        cat(".. logLik =", -1 * opt$value, "..\n")
+    } else {
+      eps0 <- eps + 1L
+      k2 <- 0
 
-        peta <- family$map2par(eta)
-        hess <- process_derivs(family$hess[[i]](y, peta, id = i), is.weight = TRUE)
-        score <- process_derivs(family$score[[i]](y, peta, id = i), is.weight = FALSE)
-        z <- eta[[i]] + 1 / hess * score
+      while((1e-04 < eps0) & (k2 < 400)) {
+        eta0 <- eta
+        for(i in nx) {
+          ll0 <- family$loglik(y, family$map2par(eta))
 
-        b0 <- cl2[[i]]
+          peta <- family$map2par(eta)
+          hess <- process_derivs(family$hess[[i]](y, peta, id = i), is.weight = TRUE)
+          score <- process_derivs(family$score[[i]](y, peta, id = i), is.weight = FALSE)
+          z <- eta[[i]] + 1 / hess * score
 
-        if(is.null(weights[[i]])) {
-          XW <- Xi[[i]] * hess
-        } else {
-          XW <- Xi[[i]] * hess * weights[[i]]
-        }
+          b0 <- cl2[[i]]
 
-        cl2[[i]] <- 1/(sum(XW, na.rm = TRUE) + 1e-20) * sum(XW * z, na.rm = TRUE)
-
-        eta[[i]] <- drop(Xi[[i]] * cl2[[i]])
-
-        ll1 <- family$loglik(y, family$map2par(eta))
-
-        if(ll1 < ll0) {
-          fnu <- function(nu) {
-            b <- nu * cl2[[i]] + (1 - nu) * b0
-            eta[[i]] <- drop(Xi[[i]] * b)
-            return(family$loglik(y, family$map2par(eta)))
+         if(is.null(weights[[i]])) {
+            XW <- Xi[[i]] * hess
+         } else {
+            XW <- Xi[[i]] * hess * weights[[i]]
           }
-          objfun0 <- function(nu) {
-            ll0 - fnu(nu)
-          }
-          nu <- optimize(objfun0, c(0, 1))$minimum
-          cl2[[i]] <- nu * cl2[[i]] + (1 - nu) * b0
+
+          cl2[[i]] <- 1/(sum(XW, na.rm = TRUE) + 1e-20) * sum(XW * z, na.rm = TRUE)
+
           eta[[i]] <- drop(Xi[[i]] * cl2[[i]])
+
+          ll1 <- family$loglik(y, family$map2par(eta))
+
+          if(ll1 < ll0) {
+            fnu <- function(nu) {
+              b <- nu * cl2[[i]] + (1 - nu) * b0
+              eta[[i]] <- drop(Xi[[i]] * b)
+              return(family$loglik(y, family$map2par(eta)))
+            }
+            objfun0 <- function(nu) {
+              ll0 - fnu(nu)
+            }
+            nu <- optimize(objfun0, c(0, 1))$minimum
+            cl2[[i]] <- nu * cl2[[i]] + (1 - nu) * b0
+            eta[[i]] <- drop(Xi[[i]] * cl2[[i]])
+          }
         }
-      }
-      eps0 <- do.call("cbind", eta)
-      eps0 <- mean(abs((eps0 - do.call("cbind", eta0)) / eps0), na.rm = TRUE)
+        eps0 <- do.call("cbind", eta)
+        eps0 <- mean(abs((eps0 - do.call("cbind", eta0)) / eps0), na.rm = TRUE)
 
-      if(verbose) {
-        cat(if(ia & flush) "\r" else if(k2 > 1) "\n" else NULL)
-        cat("logLik =", family$loglik(y, family$map2par(eta)), "eps =", eps0,
-          "iter =", k2, if(!ia) "\n" else NULL)
+        if(verbose) {
+          cat(if(ia & flush) "\r" else if(k2 > 1) "\n" else NULL)
+          cat(".. logLik =", fmt(family$loglik(y, family$map2par(eta))), "eps =", fmt(eps0, digits = 5),
+            "iter =", formatC(k2, width = 5), if(!ia) "..\n" else NULL)
+        }
+
+        k2 <- k2 + 1
       }
 
-      k2 <- k2 + 1
+      if(verbose)
+        cat("\n")
     }
 
     if(valid) {
@@ -803,62 +840,86 @@ extract_nnet_weights <- function(x)
     if(verbose)
       cat(".. estimate linear model ..\n")
 
-    while((1e-04 < eps0) & (k2 < 400)) {
-      eta0 <- eta
+    if(do_optim) {
+
+      obj_fun_l <- function(beta) {
+        eta <- list()
+        for(i in nx) {
+          b <- beta[grep(paste0(i, "."), names(beta), fixed = TRUE)]
+          eta[[i]] <- drop(X[[i]] %*% b)
+        }
+        ll <- family$loglik(y, family$map2par(eta))
+        return(-ll)
+      }
+
+      opt <- optim(unlist(cl), fn = obj_fun_l, method = "L-BFGS-B")
+
+      eta <- cl <- list()
       for(i in nx) {
-        ll0 <- family$loglik(y, family$map2par(eta))
-        if(linear[i]) {
-          peta <- family$map2par(eta)
-          hess <- process_derivs(family$hess[[i]](y, peta, id = i), is.weight = TRUE)
-          score <- process_derivs(family$score[[i]](y, peta, id = i), is.weight = FALSE)
-          z <- eta[[i]] + 1 / hess * score
+        cl[[i]] <- opt$par[grep(paste0(i, "."), names(opt$par), fixed = TRUE)]
+        eta[[i]] <- drop(X[[i]] %*% cl[[i]])
+      }
+      if(verbose)
+        cat(".. logLik =", -1 * opt$value, "..\n")
 
-          b0 <- cl[[i]]
+    } else {
+      while((1e-04 < eps0) & (k2 < 400)) {
+        eta0 <- eta
+        for(i in nx) {
+          ll0 <- family$loglik(y, family$map2par(eta))
+          if(linear[i]) {
+            peta <- family$map2par(eta)
+            hess <- process_derivs(family$hess[[i]](y, peta, id = i), is.weight = TRUE)
+            score <- process_derivs(family$score[[i]](y, peta, id = i), is.weight = FALSE)
+            z <- eta[[i]] + 1 / hess * score
 
-          if(is.null(weights[[i]])) {
-            XW <- X[[i]] * hess
-          } else {
-            XW <- X[[i]] * hess * weights[[i]]
-          }
+            b0 <- cl[[i]]
 
-          cl[[i]] <- drop(chol2inv(chol(crossprod(XW, X[[i]]) + Pl[[i]])) %*% crossprod(XW, z))
-
-          eta[[i]] <- drop(X[[i]] %*% cl[[i]])
-
-          ll1 <- family$loglik(y, family$map2par(eta))
-
-          if(ll1 < ll0) {
-            fnu <- function(nu) {
-              b <- nu * cl[[i]] + (1 - nu) * b0
-              eta[[i]] <- drop(X[[i]] %*% b)
-              return(family$loglik(y, family$map2par(eta)))
+            if(is.null(weights[[i]])) {
+              XW <- X[[i]] * hess
+            } else {
+              XW <- X[[i]] * hess * weights[[i]]
             }
-            objfun1 <- function(nu) {
-              ll0 - fnu(nu)
-            }
-            nu <- optimize(objfun1, c(0, 1))$minimum
-            cl[[i]] <- nu * cl[[i]] + (1 - nu) * b0
+
+            cl[[i]] <- drop(chol2inv(chol(crossprod(XW, X[[i]]) + Pl[[i]])) %*% crossprod(XW, z))
+
             eta[[i]] <- drop(X[[i]] %*% cl[[i]])
+
+            ll1 <- family$loglik(y, family$map2par(eta))
+
+            if(ll1 < ll0) {
+              fnu <- function(nu) {
+                b <- nu * cl[[i]] + (1 - nu) * b0
+                eta[[i]] <- drop(X[[i]] %*% b)
+                return(family$loglik(y, family$map2par(eta)))
+              }
+              objfun1 <- function(nu) {
+                ll0 - fnu(nu)
+              }
+              nu <- optimize(objfun1, c(0, 1))$minimum
+              cl[[i]] <- nu * cl[[i]] + (1 - nu) * b0
+              eta[[i]] <- drop(X[[i]] %*% cl[[i]])
+            }
           }
         }
+        eps0 <- do.call("cbind", eta)
+        eps0 <- mean(abs((eps0 - do.call("cbind", eta0)) / eps0), na.rm = TRUE)
+
+        if(verbose) {
+          cat(if(ia & flush) "\r" else if(k2 > 1) "\n" else NULL)
+          cat(".. logLik =", fmt(family$loglik(y, family$map2par(eta))),
+            "eps =", fmt(eps0, digits = 5), "iter =", formatC(k2, width = 5), if(!ia) "..\n" else NULL)
+        }
+
+        k2 <- k2 + 1
       }
-      eps0 <- do.call("cbind", eta)
-      eps0 <- mean(abs((eps0 - do.call("cbind", eta0)) / eps0), na.rm = TRUE)
-
-      if(verbose) {
-        cat(if(ia & flush) "\r" else if(k2 > 1) "\n" else NULL)
-        cat("logLik =", family$loglik(y, family$map2par(eta)),
-          "eps =", eps0, "iter =", k2, if(!ia) "\n" else NULL)
-      }
-
-      k2 <- k2 + 1
-    }
-    for(i in nx)
-      names(cl[[i]]) <- colnames(X[[i]])
-
-    if(valid) {
       for(i in nx)
-        veta[[i]] <- drop(vX[[i]] %*% cl[[i]])
+        names(cl[[i]]) <- colnames(X[[i]])
+
+      if(valid) {
+        for(i in nx)
+          veta[[i]] <- drop(vX[[i]] %*% cl[[i]])
+      }
     }
   }
 
@@ -1162,10 +1223,10 @@ extract_nnet_weights <- function(x)
 
     if(verbose) {
       cat(if(ia & flush) "\r" else if(iter > 1) "\n" else NULL)
-      cat("AIC = ", ic[length(ic)],
-        " logLik = ", ll,
-        " size = ", size,
-        " eps = ", round(eps0, 5),
+      cat("AIC = ", fmt(ic[length(ic)]),
+        " logLik = ", fmt(ll),
+        " size = ", formatC(size, width = 3),
+        " eps = ", fmt(eps0, digits = 5),
         if(select) paste0(" par = ", i) else NULL,
         if(!ia) "\n" else NULL, sep = "")
     }
@@ -1224,9 +1285,9 @@ extract_nnet_weights <- function(x)
 
   if(verbose & ia) {
     cat("\n.. final model ..\n")
-    cat("AIC = ", ic[length(ic)],
-      " logLik = ", logLik[length(logLik)],
-      " size = ", size_save[length(size_save)]
+    cat("AIC = ", fmt(ic[length(ic)]),
+      " logLik = ", fmt(logLik[length(logLik)]),
+      " size = ", formatC(size_save[length(size_save)], width = 3)
     )
     cat("\n")
   }
@@ -1347,8 +1408,8 @@ predict.srt <- function(object, newdata, model = NULL,
       if(length(object$scaled[[i]])) {
         for(j in names(object$scaled[[i]])) {
           sx <- object$scaled[[i]][[j]]
-          #X[[i]][, j] <- (X[[i]][, j] - sx$mean) / sx$sd
-          X[[i]][, j] <- (X[[i]][, j] - sx$min) / (sx$max - sx$min)
+          X[[i]][, j] <- (X[[i]][, j] - sx$mean) / sx$sd
+          #X[[i]][, j] <- (X[[i]][, j] - sx$min) / (sx$max - sx$min)
         }
       }
     }
@@ -1489,8 +1550,8 @@ predict.srf <- function(object, newdata, model = NULL,
       if(length(object$scaled[[i]])) {
         for(j in names(object$scaled[[i]])) {
           sx <- object$scaled[[i]][[j]]
-          #X[[i]][, j] <- (X[[i]][, j] - sx$mean) / sx$sd
-          X[[i]][, j] <- (X[[i]][, j] - sx$min) / (sx$max - sx$min)
+          X[[i]][, j] <- (X[[i]][, j] - sx$mean) / sx$sd
+          #X[[i]][, j] <- (X[[i]][, j] - sx$min) / (sx$max - sx$min)
         }
       }
     }
@@ -1741,7 +1802,7 @@ plot.srt_residuals <- function(x, which = c("hist-resid", "qq-resid"), spar = TR
         if(is.null(args$ylab))
           args$ylab <- "Density"
         if(is.null(args$main)) 
-          args$main <- paste("Histogramm and density", if(!is.null(cn[j])) paste(":", cn[j]) else NULL)
+          args$main <- paste("Histogram and density", if(!is.null(cn[j])) paste(":", cn[j]) else NULL)
         ok <- try(do.call("hist", args))
         if(!inherits(ok, "try-error"))
           lines(rdens)
@@ -2095,9 +2156,9 @@ srtboost <- function(..., nu = 0.1  , k = 4, lambda = 1e-05, n.iter = 400,
     if(verbose) {
       cat(if(ia) "\r" else if(k > 1) "\n" else NULL)
       cat(
-        " iter = ", k,
-        " logLik = ", ll[k],
-        " eps = ", round(eps0, 5),
+        " iter = ", formatC(k, width = 5),
+        " logLik = ", fmt(ll[k]),
+        " eps = ", fmt(round(eps0, 5)),
         if(select) paste0(" par = ", nx[i]) else NULL,
         if(!ia) "\n" else NULL, sep = "")
     }
