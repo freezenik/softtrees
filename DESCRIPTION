@@ -3,8 +3,8 @@ Type: Package
 Title: Soft Distributional Regression Trees and Forests
 Version: 1.1
 Date: 2023-01-03
-Authors@R: c(person(given = "Nikolaus", family = "Umlauf", role = c("aut", "cre"), email = "Nikolaus.Umlauf@uibk.ac.at",
-         comment = c(ORCID = "0000-0003-2160-9803")))
+Authors@R: c(person(given = "Nikolaus", family = "Umlauf", role = c("aut", "cre"), email = "Nikolaus.Umlauf@uibk.ac.at", comment = c(ORCID = "0000-0003-2160-9803")),
+             person(given = "Nadja", family = "Klein", role = "aut", email = "nklein@uni-goettingen.de", comment = c(ORCID = "0000-0002-5072-5347")))
 Description: The implementation provides infrastructure for the estimation of distributional
   regression trees and forest using soft splits. Splits are either based on single covariates
   or can be fully multivariate. The package also includes boosting algorithms that use
